@@ -60,7 +60,7 @@ function App() {
           throw new Error('地名または住所を入力してください');
         }
 
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://suggestore-backend-env.eba-frqmejma.ap-northeast-1.elasticbeanstalk.com';
+        const baseUrl = import.meta.env.VITE_API_URL || 'https://d2c1qebv3matym.cloudfront.net';
         const geocodeParams = new URLSearchParams({
           address: manualAddress,
         });
@@ -78,7 +78,7 @@ function App() {
       }
 
       // 取得した緯度経度で飲食店を検索
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://suggestore-backend-env.eba-frqmejma.ap-northeast-1.elasticbeanstalk.com';
+      const baseUrl = import.meta.env.VITE_API_URL || 'https://d2c1qebv3matym.cloudfront.net';
       const params = new URLSearchParams({
         latitude: latitude.toString(),
         longitude: longitude.toString(),
