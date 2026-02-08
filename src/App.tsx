@@ -1,12 +1,31 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface Restaurant {
+  placeId: string;
   name: string;
   address: string;
   rating: number;
   ratingCount: number;
   googleMapsUrl: string;
 }
+
+// 匿名ユーザーIDを取得または生成
+const getAnonymousUserId = (): string => {
+  const storageKey = 'suggestore_anonymous_user_id';
+  let userId = localStorage.getItem(storageKey);
+  
+  if (!userId) {
+    // UUIDv4形式のIDを生成
+    userId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+    localStorage.setItem(storageKey, userId);
+  }
+  
+  return userId;
+};
 
 // ジャンルの選択肢（表示名とAPI値のマッピング）
 const GENRE_OPTIONS = [
@@ -25,6 +44,7 @@ function App() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [anonymousUserId, setAnonymousUserId] = useState<string>('');
 
   // 検索条件の状態管理
   const [radius, setRadius] = useState(1000);
@@ -36,7 +56,36 @@ function App() {
   // 検索場所の状態管理
   const [searchMode, setSearchMode] = useState<'current' | 'manual'>('current');
   const [manualAddress, setManualAddress] = useState('');
+// 匿名ユーザーIDを初期化
+  useEffect(() => {
+    setAnonymousUserId(getAnonymousUserId());
+  }, []);
 
+  // ユーザー行動を記録する関数
+  const recordUserAction = async (placeId: string, actionType: 'VIEW' | 'GOOD' | 'BAD') => {
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || 'https://d2c1qebv3matym.cloudfront.net';
+      const response = await fetch(`${baseUrl}/api/useraction/record`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          anonymousUserId,
+          placeId,
+          actionType,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to record user action');
+      }
+    } catch (err) {
+      console.error('Error recording user action:', err);
+    }
+  };
+
+  
   const fetchRandomRestaurant = async () => {
     setLoading(true);
     setError(null);
@@ -388,12 +437,56 @@ function App() {
                   📍 {restaurant.address}
                 </p>
                 
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                  <button
+                    onClick={() => recordUserAction(restaurant.placeId, 'GOOD')}
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: 'white',
+                      backgroundColor: '#4CAF50',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.3s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#45a049'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#4CAF50'}
+                  >
+                    👍 いいかも
+                  </button>
+                  
+                  <button
+                    onClick={() => recordUserAction(restaurant.placeId, 'BAD')}
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: 'white',
+                      backgroundColor: '#f44336',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.3s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#da190b'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f44336'}
+                  >
+                    👎 行かない
+                  </button>
+                </div>
+                
                 <a 
                   href={restaurant.googleMapsUrl} 
                   target="_blank" 
                   rel="noreferrer"
+                  onClick={() => recordUserAction(restaurant.placeId, 'VIEW')}
                   style={{
-                    display: 'inline-block',
+                    display: 'block',
+                    marginTop: '10px',
                     padding: '10px 20px',
                     fontSize: '0.9rem',
                     fontWeight: '600',
@@ -406,7 +499,7 @@ function App() {
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1565C0'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1976D2'}
                 >
-                  🗺️ マップ
+                  🗺️ マップで見る
                 </a>
               </div>
             ))}
